@@ -1,6 +1,9 @@
 /*!
  * mixins
  */
+
+@import 'https://fonts.googleapis.com/icon?family=Material+Icons';
+
 // vendorize mixin
 @mixin bc-vendorize($property, $value) {
 	-webkit-#{$property}: $value;
@@ -35,6 +38,7 @@
  *
  * includes go here
  */
+@import 'components/md-button';
 @import 'components/bc-tabs';
 @import 'components/bc-list';
 @import 'components/bc-checkbox';

@@ -1,10 +1,9 @@
 
 $white: #fff;
-$off-white: #eee;
+$off-white: #f5f5f5;
 
 .bc-select {
-	display: inline-block;
-	position: relative;
+	display: inline-block !important;
 	height: 36px;
 	margin: 0;
 	padding: 0;
@@ -14,89 +13,75 @@ $off-white: #eee;
 	font-weight: inherit;
 	line-height: 1;
 
-	& > a {
+	& > .menu-button {
+		@include bc-box-sizing;
+		@include bc-background-image(linear-gradient(top, $white, $off-white));
+		position: relative;
+		padding: 11px 50px 11px 10px;
+		border: 1px solid #ccc;
+		border-radius: 3px;
+		background-color: #fafafa;
+		color: #8e8e8e;
+		font: 14px/1 proxima;
+		text-align: left;
+		cursor: pointer;
 
-		&.d-button {
-			@include bc-background-image(linear-gradient(top, $white, $off-white));
-			padding: 9px 28px 9px 16px;
-			border-radius: 3px;
-			color: $bc-color-3;
-			font: 16px/1 proxima;
-			text-overflow: ellipsis;
-			white-space: nowrap;
-			overflow: hidden;
-
-			&:after {
-				position: absolute;
-				top: 16px;
-				right: 16px;
-				width: 0;
-				height: 0;
-				border-top: 4px solid $bc-color-3;
-				border-right: 4px solid transparent;
-				border-bottom: 4px solid transparent;
-				border-left: 4px solid transparent;
-				content: '\00a0';
-			}
+		&:after {
+			position: absolute;
+			top: 16px;
+			right: 10px;
+			width: 0;
+			height: 0;
+			border: 5px solid transparent;
+			border-top-color: #8e8e8e;
+			content: '\00a0';
 		}
 	}
 
-	& > .dots {
+	& > .icon {
 		display: none;
 	}
 
-	& > .download {
-		display: none;
-	}
+	& > .list-container {
+		display: inline-block;
+		position: relative;
+		width: 100%;
+		height: 1px;
+		float: left;
+		clear: both;
+		z-index: 1000;
 
-	& > ul {
 
-		&.select-container {
-			@include bc-box-sizing;
+		& > .select-container {
 			display: none;
 			position: absolute;
-			top: 42px;
-			right: 0;
-			//width: 200%;
-			min-width: 200%;
-			max-width: 400%;
+			top: 7px;
+			left: 0;
+			width: auto;
+			min-width: 100%;
 			height: auto;
-			max-height: 400px;
-			padding: 8px 16px;
-			border: 1px solid $bc-color-5;
+			max-height: 450px;
+			padding: 0;
+			border: 1px solid #ccc;
 			border-radius: 3px;
-			background: $bc-color-7;
-			box-shadow: 0 2px 7px -2px $bc-color-13;
+			background-color: #fafafa;
+			box-shadow: -1px 1px 7px -4px #111;
 			overflow: hidden;
-			z-index: 1000;
 			overflow-y: auto;
-
-			&.all {
-				min-width: 300px;
-			}
+			z-index: 1000;
 
 			& > li {
-				width: 100%;
-				height: 36px;
+				display: block;
+				width: auto;
+				min-width: 120px;
+				padding: 9px 20px 9px 10px;
 				color: $bc-color-17;
-				font: 15px/36px $ft-norm;
+				font: 14px/1 proxima;
 				text-align: left;
-				text-overflow: ellipsis;
 				white-space: nowrap;
-				cursor: pointer;
+				text-overflow: ellipsis;
 				overflow: hidden;
-
-				& > div {
-					display: inline-block;
-					width: 100%;
-					text-overflow: ellipsis;
-					white-space: nowrap;
-					overflow: hidden;
-				}
-
-				&:hover {
-					color: $bc-color-1;
-				}
+				cursor: pointer;
 
 				&.unselectable {
 					color: $bc-color-8;
@@ -107,6 +92,24 @@ $off-white: #eee;
 				&.selected {
 					color: $bc-color-1;
 				}
+
+				&.disabled {
+					color: #aaa;
+					cursor: default;
+				}
+
+				&:hover {
+					background-color: #f6f6f6;
+					color: $bc-color-1;
+				}
+
+				&:first-of-type {
+					padding-top: 19px;
+				}
+
+				&:last-of-type {
+					padding-bottom: 19px;
+				}
 			}
 
 			&.hl-disabled {
@@ -114,16 +117,21 @@ $off-white: #eee;
 					&.selected {
 						color: $bc-color-17;
 					}
+
+					&:hover {
+						background-color: #f6f6f6;
+						color: $bc-color-1;
+					}
 				}
 			}
 		}
 	}
 
 	&.top {
-		& > ul {
-			&.select-container {
+		& > .list-container {
+			& > .select-container {
 				top: auto;
-				bottom: 42px;
+				bottom: 47px;
 			}
 		}
 	}
@@ -131,8 +139,8 @@ $off-white: #eee;
 	&.left {
 		float: left;
 
-		& > ul {
-			&.select-container {
+		& > .list-container {
+			& > .select-container {
 				right: initial;
 				left: 0;
 			}
@@ -142,118 +150,82 @@ $off-white: #eee;
 	&.full {
 		width: 100%;
 
-		& > a {
-			&.d-button {
-				width: 100%;
-				text-align: left;
-			}
+		& > .menu-button {
+			width: 100%;
+			text-align: left;
 		}
 
-		& > ul {
-			width: 100%;
-			min-width: initial;
-			max-width: initial;
-
-			&.select-container {
+		& > .list-container {
+			& > .select-container {
 				width: 100%;
+				right: 0;
+				left: -1px;
 				z-index: 1000;
 			}
 		}
 	}
 
 	&.active {
+		position: relative;
+		z-index: 1000;
+
 		& > a {
 			&.d-button {
 				background: $bc-color-16;
 			}
 		}
 
-		& > ul {
-			&.select-container {
+		& > .list-container {
+			& > .select-container {
 				display: block;
 			}
 		}
 	}
 
 	&.small {
-		width: 36px;
-		height: 32px;
+		width: 44px;
+		height: 42px;
 		margin: 0;
 		cursor: pointer;
 
-		& > .dots {
-			display: block;
-			width: 36px;
-			height: 32px;
-			cursor: pointer;
+		& > .icon {
+			display: inline-block;
+			width: 42px;
+			height: 42px;
+			text-align: center;
 
-			& > span {
-				display: block;
-				width: 5px;
-				height: 5px;
-				margin: 5px auto;
-				padding: 0;
-				clear: both;
-				border-radius: 5px;
-				background: $bc-color-12;
+			& > i {
+				color: $bc-color-12;
+				font-size: 36px;
+				line-height: 42px;
 			}
 
 			&:hover {
-				& > span {
-					background: $bc-color-11;
+				background-color: transparent;
+
+				& > i {
+					color: $bc-color-11;
 				}
 			}
 		}
 
-		ul {
-			&.select-container {
-				top: 33px;
-				right: 10px;
-				width: 300px;
-				max-width: none;
+		& > .list-container {
+			& > .select-container {
+				right: 5px;
+				left: initial;
 			}
 		}
 
-		a {
-			&.d-button {
-				display: none;
-			}
+		& > .menu-button {
+			display: none;
 		}
 
 		&.top {
-			& > ul {
-				&.select-container {
+			& > .list-container {
+				& > .select-container {
 					top: auto;
-					bottom: 33px;
+					bottom: 50px;
 				}
-			}
-		}
-	}
-
-	&.download {
-		width: 32px;
-		height: 32px;
-		margin: 0;
-		cursor: pointer;
-
-		& > .download {
-			display: block;
-			width: 32px;
-			height: 32px;
-			cursor: pointer;
-		}
-
-		ul {
-			&.select-container {
-				top: 33px;
-				right: 10px;
-				width: 300px;
-			}
-		}
-
-		a {
-			&.d-button {
-				display: none;
 			}
 		}
 	}
@@ -263,18 +235,26 @@ $off-white: #eee;
 	.bc-select {
 		width: 100%;
 
-		& > a {
-			&.d-button {
+		& > .menu-button {
+			width: 100%;
+			text-align: left;
+		}
+
+		& > .list-container {
+			& > .select-container {
 				width: 100%;
-				text-align: left;
+				left: 0;
+				right: initial;
 			}
 		}
 
-		& > ul {
-			&.select-container {
-				width: 100%;
-				min-width: initial;
-				max-width: initial;
+		&.small {
+			& > .list-container {
+				& > .select-container {
+					width: calc(100vw - 20px);
+					left: initial;
+					right: 0;
+				}
 			}
 		}
 	}

@@ -2,14 +2,14 @@
  * @module Components
  *
  */
-import { A } from '@ember/array';
-import { on } from '@ember/object/evented';
-import { isNone, isEmpty } from '@ember/utils';
-import EmberObject, { computed } from '@ember/object';
-import Component from '@ember/component';
 import $ from 'jquery';
-import layout from '../templates/components/bc-select-menu';
+import { A } from '@ember/array';
+import { isNone, isEmpty } from '@ember/utils';
+import EmberObject, { get, set, computed } from '@ember/object';
+import Component from '@ember/component';
+import CloseOnEscape from '../mixins/close-on-escape';
 import BindOutsideClick from '../mixins/bind-outside-click';
+import layout from '../templates/components/bc-select-menu';
 
 /***/
 
@@ -29,10 +29,12 @@ function forEachOption(data, callback, target=null) {
  * @namespace Components
  * @extends Ember.Component
  */
-export default Component.extend(BindOutsideClick, {
+export default Component.extend(CloseOnEscape, BindOutsideClick, {
   layout,
 	classNames: ['bc-select-menu'],
 	classNameBindings: ['right', 'isMenuOpen:open', 'fullwidth', 'large'],
+
+	__closeActionName: 'closeMenu',
 
 	/**
 	 * Flag for a larger drop down button
@@ -141,12 +143,12 @@ export default Component.extend(BindOutsideClick, {
 	 * @type {string}
 	 */
 	selectedText: computed('selected', 'label', 'listItem.[]', function() {
-		if (!isNone(this.get('selected'))) { // look for a selected option first
-			return this.get('selected.label');
-		} else if (!isEmpty(this.get('label'))) { // if no selected option then look for a provided label
-			return this.get('label');
-		} else if (!isNone(this.get('listItem'))) { // no option or label then set it to the first option label
-			return this.get('listItem.firstObject.label');
+		if (!isNone(get(this, 'selected'))) { // look for a selected option first
+			return get(this, 'selected.label');
+		} else if (!isEmpty(get(this, 'label'))) { // if no selected option then look for a provided label
+			return get(this, 'label');
+		} else if (!isNone(get(this, 'listItem'))) { // no option or label then set it to the first option label
+			return get(this, 'listItem.firstObject.label');
 		} else { // otherwise just return an empty string
 			return '';
 		}
@@ -159,19 +161,17 @@ export default Component.extend(BindOutsideClick, {
 	 * @method setup
 	 * @returns {void}
 	 */
-	setup: on('didRender', function() {
-		if (this.$()) {
-			// call bindClick on the ClickedOffComponent mixin
-			// to bind a click event to close the dialog
-			this.bindClick('closeMenu');
+	didRender() {
+		this._super();
 
+		if (this.$()) {
 			// get options list
 			const data = this.$('.hidden-template').children();
 			if (this.hasChanges(data)) {
 				this.createOptionsList(data);
 			}
 		}
-	}),
+	},
 
 	/**
 	 * Override method that gets called to
@@ -233,7 +233,7 @@ export default Component.extend(BindOutsideClick, {
 				// create the option item
 				const opt = this.createOption(el);
 
-				if (opt.get('selected')) {
+				if (get(opt, 'selected')) {
 					this.setSelected(opt);
 				}
 
@@ -243,7 +243,7 @@ export default Component.extend(BindOutsideClick, {
 		});
 
 		// set new list items
-		this.set('listItem', dataArray);
+		set(this, 'listItem', dataArray);
 	},
 
 	/**
@@ -263,16 +263,16 @@ export default Component.extend(BindOutsideClick, {
 			// if no changes detected yet
 			if (!hasChanges) {
 				// the list is empty so all items have changed
-				if (isEmpty(this.get('listItem'))) {
+				if (isEmpty(get(this, 'listItem'))) {
 					hasChanges = true;
 				} else {
 					// create option obj from element
 					const option = this.createOption(el);
 
 					// dont include default labels in the changes
-					if (option.get('class') !== 'default-label') {
+					if (get(option, 'class') !== 'default-label') {
 						// get old option item
-						const oldOpt = this.get('listItem').findBy('value', option.get('value'));
+						const oldOpt = get(this, 'listItem').findBy('value', get(option, 'value'));
 
 						// item not found in list items
 						if (isNone(oldOpt)) {
@@ -281,7 +281,7 @@ export default Component.extend(BindOutsideClick, {
 							// check all keys in old opt for changes
 							Object.keys(option).forEach((key) => {
 								// item property does not mathc old property
-								if (oldOpt.get(key) !== option.get(key)) {
+								if (get(oldOpt, key) !== get(option, key)) {
 									hasChanges = true;
 								}
 							});
@@ -303,9 +303,15 @@ export default Component.extend(BindOutsideClick, {
 	 * @return {void}
 	 */
 	setSelected(option) {
-		if (!this.get('disableChange')) {
-			this.set('selected', option);
+		if (!get(this, 'disableChange')) {
+			set(this, 'selected', option);
 		}
+	},
+
+	onOutsideClick() { this.send('closeMenu'); },
+	onEscape() {
+		this.send('closeMenu');
+		return false;
 	},
 
 	actions: {
@@ -319,7 +325,13 @@ export default Component.extend(BindOutsideClick, {
 		 * @returns {void}
 		 */
 		toggleMenu() {
-			this.set('isMenuOpen', !this.get('isMenuOpen'));
+			if (!get(this, 'isMenuOpen')) {
+				this.bindEscape();
+				this.bindClick();
+				set(this, 'isMenuOpen', true);
+			} else {
+				this.send('closeMenu');
+			}
 		},
 
 		/**
@@ -332,7 +344,9 @@ export default Component.extend(BindOutsideClick, {
 		 * @returns {void}
 		 */
 		closeMenu() {
-			this.set('isMenuOpen', false);
+			this.unbindEscape();
+			this.unbindClick();
+			set(this, 'isMenuOpen', false);
 		},
 
 		/**
@@ -348,16 +362,20 @@ export default Component.extend(BindOutsideClick, {
 		selectAction(option) {
 			// do nothing if disabled is set to
 			// true for the item selected
-			if (!option.get('disabled')) {
+			if (!get(option, 'disabled')) {
 				// close menu unless keep open
 				// is set to true
-				if (!this.get('keepOpen')) {
+				if (!get(this, 'keepOpen')) {
 					this.send('closeMenu');
 				}
 
 				// send the value of the option to the onSelect callback
-				this.sendAction('onSelect', option.get('value'));
+				this.sendAction('onSelect', get(option, 'value'));
 			}
+		},
+
+		stopPropagation() {
+			return false;
 		}
 	}
 });

@@ -1,12 +1,8 @@
-# @busybusy/components
-[![npm version](https://badge.fury.io/js/busy-components.svg)](https://badge.fury.io/js/busy-components)
-[![Build Status](https://travis-ci.org/busybusy/webapp-busy-components.svg?branch=master)](https://travis-ci.org/busybusy/webapp-busy-components)
-[![Ember Observer Score](https://emberobserver.com/badges/busy-components.svg)](https://emberobserver.com/addons/busy-components)
-[![Ember badge][ember-badge]][embadge]
-[![Code Climate](https://codeclimate.com/github/busybusy/webapp-busy-components/badges/gpa.svg)](https://codeclimate.com/github/busybusy/webapp-busy-components)
-[![Test Coverage](https://codeclimate.com/github/busybusy/webapp-busy-components/badges/coverage.svg)](https://codeclimate.com/github/busybusy/webapp-busy-components/coverage)
-[![Issue Count](https://codeclimate.com/github/busybusy/webapp-busy-components/badges/issue_count.svg)](https://codeclimate.com/github/busybusy/webapp-busy-components)
+# @busy-web/components
 
+[![Build Status](https://travis-ci.org/busy-web/components.svg?branch=master)](https://travis-ci.org/busy-web/components)
+[![Maintainability](https://api.codeclimate.com/v1/badges/bf77bd7b8ce6cd621f2d/maintainability)](https://codeclimate.com/github/busy-web/components/maintainability)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/bf77bd7b8ce6cd621f2d/test_coverage)](https://codeclimate.com/github/busy-web/components/test_coverage)
 
 This README outlines the details of collaborating on this Ember addon.
 
@@ -17,7 +13,7 @@ This is an ember addon and requires ember-cli.
 Note: This component does not support Ember 1.13
 
 ```
-ember install @busybusy/components
+ember install @busy-web/components
 ```
 
 ## Setup
@@ -66,7 +62,7 @@ For more information on using ember-cli, visit [http://ember-cli.com/](http://em
 
 ## Installing Addon
 
-* `ember install @busybusy/components`
+* `ember install @busy-web/components`
 
 ## Usage
 

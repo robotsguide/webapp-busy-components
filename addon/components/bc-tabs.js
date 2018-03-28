@@ -2,188 +2,143 @@
  * @module components
  *
  */
-import { observer } from '@ember/object';
-import { dasherize } from '@ember/string';
 import $ from 'jquery';
-import { next } from '@ember/runloop';
-import { isEmpty, isNone } from '@ember/utils';
-import { A } from '@ember/array';
+import { assert } from '@ember/debug';
+import { dasherize } from '@ember/string';
+import EmberObject, { get, set } from '@ember/object';
+import { isNone, isEmpty } from '@ember/utils';
 import Component from '@ember/component';
 import layout from '../templates/components/bc-tabs';
+
+/***/
+const TAB_CONTENT = '.--bc-tabs-content';
 
 /**
  * `Component/BCTabs`
  *
  * @class BCTabs Component
- *
  * @extends Ember.Component
  */
 export default Component.extend({
 	layout: layout,
 
-	classNames: ['bc-tabs'],
-	classNameBindings: ['active:active'],
-
-	/**
-	 * variable to follow which tab is active
-	 *
-	 * @property active
-	 * @type bollean
-	 */
-	active: false,
+	classNames: ['--bc-tabs'],
 
 	/**
 	 * variable for tracking tabNames, is an array
 	 *
-	 * @property tabNames
-	 * @type boolean
+	 * @property model
+	 * @type object[]
 	 */
 	model: null,
-	_tabs: null,
+
 	defaultTab: '',
+	currentTab: '',
+	hashName: '',
+
+	firstRender: false,
 
 	init() {
 		this._super();
-		this.set('_tabs', A());
-		window.onhashchange = (() => this.handleHash());
+		this.handleHash();
+	},
+
+	didRender() {
+		this._super();
+		if (!get(this, 'firstRender')) {
+			set(this, 'firstRender', true);
+
+			let model = this.buildTabData();
+			if (!isEmpty(model)) {
+				let activeTab;
+				if (!isEmpty(get(this, 'defaultTab'))) {
+					activeTab = model.findBy('id', get(this, 'defaultTab'));
+				} else if (!isEmpty(get(this, 'hashName'))) {
+					activeTab = model.findBy('id', get(this, 'hashName'));
+				}
+
+				if (isNone(activeTab)) {
+					activeTab = model[0];
+					set(this, 'defaultTab', get(activeTab, 'id'));
+				}
+
+				this.openTab(activeTab);
+			}
+		}
+	},
+
+	buildTabData() {
+		assert('buildTabData must be called after render', this.$().length > 0);
+
+		let model = [];
+		this.$(TAB_CONTENT).children().each((index, el) => {
+			let elData = $(el).data();
+			let data = EmberObject.create({
+				el, id: elData.id,
+				active: false,
+				tabName: elData.tabName,
+				tabIndex: elData.tabIndex,
+				isViewable: elData.isViewable,
+				showBadge: elData.showBadge,
+				badgeContent: elData.badgeContent,
+				badgeColor: elData.badgeColor,
+				showTab() {
+					set(this, 'active', true);
+					elData.showTab();
+				},
+				hideTab() {
+					set(this, 'active', false);
+					elData.hideTab();
+				},
+				on: elData.on,
+			});
+
+			// register for child events
+			data.on('change', () => {
+				window.console.log('child change', get(data, 'id'));
+				this.buildTabData();
+			});
+
+			model.push(data);
+		});
+
+		if (get(model, 'length') > 0) {
+			// sort models by tabIndex
+			model = model.sortBy('tabIndex');
+		}
+
+		set(this, 'model', model);
+		return model;
 	},
 
 	handleHash() {
 		const hash = window.location.hash;
 		if (!isEmpty(hash) && hash.match(/^#tab-/)) {
-			this.checkHash(hash.replace(/^#tab-/, '').trim());
-		} else if (!isEmpty(this.get('defaultTab'))) {
-			this.checkHash(this.get('defaultTab'));
+			set(this, 'hashName', dasherize(hash.replace(/^#tab-/, '').trim()));
 		}
 	},
 
-	checkHash(hash) {
-		if (this.get('model.length') > 0) {
-			this.openTab(hash);
-		} else {
-			next(() => this.checkHash(hash));
-		}
-	},
+	openTab(tab) {
+		if (this.$().length > 0) {
+			// hide all other tabs
+			get(this, 'model').forEach(item => item.hideTab());
 
-	openTab(tabName, isClick) {
-		const tabs = this.get('model');
-		let didShowTab = false;
-		$.each(tabs, (key, value) => {
-			if (tabs.hasOwnProperty(key)) {
-				if (value.get('active') || value.get('open')) {
-					value.set('active', false);
-					value.set('open', false);
-				}
+			// show the new tab
+			tab.showTab();
 
-				if (tabName === dasherize(value.get('tabName').trim())) {
-					if (tabName !== this.get('defaultTab')) {
-						window.history.replaceState('', document.title, window.location.pathname + '#tab-' + tabName);
-					} else if (isClick) {
-						window.history.replaceState('', document.title, window.location.pathname);
-					}
-
-					if (!value.get('active') || !value.get('open')) {
-						value.set('active', true);
-						value.set('open', true);
-						value.triggerShowTab();
-					}
-					didShowTab = true;
-				}
-			}
-		});
-
-		if (!didShowTab) {
-			this.showDefault();
-		}
-	},
-
-	addTab(tab) {
-		if (this.get('_tabs').indexOf(tab) === -1) {
-			this.get('_tabs').pushObject(tab);
-		}
-	},
-
-	removeTab(tab) {
-		this.get('_tabs').removeObject(tab);
-	},
-
-	renderTabs() {
-		if (!this.get('isDestroyed')) {
-			const tabArray = (this.get('_tabs') || []).sortBy('tabIndex');
-			tabArray.forEach(item => {
-				if (item.get('active') || item.get('open')) {
-					item.set('active', false);
-					item.set('open', false);
-				}
-			});
-
-			// set a default tab
-			const defaultTab = tabArray.objectAt(0);
-			if (!isNone(defaultTab)) {
-				this.set('defaultTab', dasherize(defaultTab.get('tabName').trim()));
+			// set the history hash
+			if (get(tab, 'id') !== get(this, 'currentTab.id') && get(tab, 'id') !== get(this, 'defaultTab')) {
+				set(this, 'hashName', get(tab, 'id'));
+				window.history.replaceState('', document.title, `${window.location.pathname}#tab-${get(tab, 'id')}`);
 			}
 
-			this.set('model', tabArray);
-			this.handleHash();
+			set(this, 'currentTab', tab);
 		}
-	},
-
-	/**
-	 * Holds the current timeout for renderTabs
-	 *
-	 * @property renderTimeout
-	 * @type {object}
-	 */
-	renderTimeout: null,
-
-	/**
-	 * Observer for calling render every time a new tab is added to
-	 * the _tabs list.
-	 *
-	 * This is set on a timeout to keep ember from trying to rerender
-	 * itself more than once per render try. If the timeout gets called more then
-	 * one it will throw awway the other tries and only try once.
-	 *
-	 * @private
-	 * @method shouldRenderTabs
-	 * @return {void}
-	 */
-	shouldRenderTabs: observer('_tabs.[]', function() {
-		if (!isNone(this.get('_tabs')) && this.get('_tabs.length') > 0) {
-			// remove the current timeout before setting a new timeout
-			if (!isNone(this.get('renderTimeout'))) {
-				window.clearTimeout(this.get('renderTimeout'));
-			}
-
-			// create a timeout to call the renderTabs method
-			// if the shouldRenderTabs observer doesnt fire again before
-			// it gets the chance
-			const timeout = window.setTimeout(() => {
-				this.renderTabs();
-			}, 10);
-
-			if (!this.get('isDestroyed')) {
-				// save the timeout
-				this.set('renderTimeout', timeout);
-			}
-		}
-	}),
-
-	showDefault() {
-		const tab = this.get('model').objectAt(0);
-		tab.set('active', true);
-		tab.set('open', true);
-
-		const tabName = dasherize(tab.get('tabName').trim());
-		this.set('defaultTab', tabName);
-
-		tab.triggerShowTab();
 	},
 
 	actions: {
 		changeTab(tab) {
-			const tabName = dasherize(tab.get('tabName').trim());
-			this.openTab(tabName, true);
+			this.openTab(tab);
 		}
 	}
 });

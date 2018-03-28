@@ -2,12 +2,13 @@
  * @module Components
  *
  */
-import $ from 'jquery';
 import { assert } from '@ember/debug';
 import { loc } from '@ember/string';
 import { isNone, isEmpty } from '@ember/utils';
 import { computed, get, set } from '@ember/object';
 import Component from '@ember/component';
+import CloseOnEscape from '../mixins/close-on-escape';
+import BindOutsideClick from '../mixins/bind-outside-click';
 import layout from '../templates/components/bc-select';
 
 /**
@@ -25,11 +26,13 @@ import layout from '../templates/components/bc-select';
  * @property onSelect {string} The function name to call when an item is selected. onSelect will pass the selected item to the listener.
  * @property targetObject {object} The View where the onSelect function can be called. `Default: controller`
  */
-export default Component.extend({
+export default Component.extend(CloseOnEscape, BindOutsideClick, {
 	layout,
 
 	classNames: ['bc-select'],
 	classNameBindings: ['isOpen:active', 'isTop:top', 'small'],
+
+	__closeActionName: 'closeMenu',
 
 	/**
 	 * isOpen tracks the menu open state
@@ -55,14 +58,14 @@ export default Component.extend({
 	 */
 	selectedItem: computed('model.@each._selected', 'model.[]', function() {
 		let selected = null;
-		if (!isNone(this.get('model'))) {
+		if (!isNone(get(this, 'model'))) {
 			selected = this.getSelected();
 		}
 		return selected;
 	}),
 
 	getSelected() {
-		const items = this.get('model');
+		const items = get(this, 'model');
 		let selected = null;
 		if (typeof items === 'object' && typeof items.forEach === 'function') {
 			items.forEach(item => {
@@ -85,123 +88,46 @@ export default Component.extend({
 	defaultFirstOption: false,
 
 	menuTitle: computed('selectedItem', function() {
-		let label = this.get('defaultLabel');
-		let selectedItem = this.get('selectedItem');
+		let label = get(this, 'defaultLabel');
+		let selectedItem = get(this, 'selectedItem');
 
-		assert('"itemLabel" must be set to a property of the model', !isEmpty(this.get('itemLabel')));
+		assert('"itemLabel" must be set to a property of the model', !isEmpty(get(this, 'itemLabel')));
 
 		if (!isNone(selectedItem)) {
-			label = get(selectedItem, this.get('itemLabel'));
-		} else if (this.get('defaultFirstOption')) {
-			selectedItem = this.get('model').objectAt(0);
-			label = get(selectedItem, this.get('itemLabel'));
+			label = get(selectedItem, get(this, 'itemLabel'));
+		} else if (get(this, 'defaultFirstOption')) {
+			selectedItem = get(this, 'model').objectAt(0);
+			label = get(selectedItem, get(this, 'itemLabel'));
 		}
 		return label;
 	}),
 
-	/**
-	 * click event handler
-	 *
-	 * @private
-	 * @method click
-	 * @returns {void}
-	 */
-	click() {
-		if (!this.get('isOpen')) {
-			this.openMenuAction();
-		} else {
-			this.closeMenuAction();
-		}
-	},
+	checkPosition() {
+		const elem = this.$().offsetParent();
 
-	checkPosition(elem) {
-		let isBottom = false;
-		if (elem === undefined || elem.get(0).tagName === 'HTML') {
-			return isBottom;
-		}
+		let menuHeightTop = elem.height() - (elem.height() - (this.$().offset().top - elem.offset().top)) - 20; // height of the container minus the the bottom space from the top of the button.
+		let menuHeightBot = elem.height() - ((this.$().offset().top + this.$().height()) - elem.offset().top) - 20; // height of the container minus the bottom of the select button.
+		const maxHeight = parseInt(window.getComputedStyle(this.$('.select-container').get(0))['max-height'], 10);
 
-		const overflow = window.getComputedStyle(elem.get(0))['overflow-y'];
-		const hasOverflow = (overflow === 'auto' || overflow === 'scroll');
-
-		if (hasOverflow || elem.get(0).tagName === 'BODY') {
-			let menuHeightTop = elem.height() - (elem.height() - (this.$().offset().top - elem.offset().top)) - 20; // height of the container minus the the bottom space from the top of the button.
-			let menuHeightBot = elem.height() - ((this.$().offset().top + this.$().height()) - elem.offset().top) - 20; // height of the container minus the bottom of the select button.
-			const maxHeight = parseInt(window.getComputedStyle(this.$('.select-container').get(0))['max-height'], 10);
-
+		if (menuHeightTop > 200) {
 			if (menuHeightBot < maxHeight) {
 				if (menuHeightTop > menuHeightBot) {
-					isBottom = true;
-
 					if (menuHeightTop < maxHeight) {
 						menuHeightTop = menuHeightTop > 150 ? menuHeightTop : 150;
 						this.$('.select-container').css('max-height', menuHeightTop);
 					}
+					return true;
 				} else {
 					menuHeightBot = menuHeightBot > 150 ? menuHeightBot : 150;
 					this.$('.select-container').css('max-height', menuHeightBot);
 				}
 			}
-			return isBottom;
-		} else {
-			return this.checkPosition(elem.parent());
 		}
-	},
-
-	/**
-	 * Opens the list menu and sets up a global click event to
-	 * watch for clicks not in the menu to close the menu
-	 *
-	 * @private
-	 * @method openMenuAction
-	 * @returns {void}
-	 */
-	openMenuAction() {
-		const $body = $('body');
-
-		// trigger other select-menu's to close
-		$body.trigger('click.bc-select');
-
-		this.set('isOpen', true);
-
-		if (this.get('openTop')) {
-			this.set('isTop', true);
-		} else {
-			if (this.checkPosition(this.$())) {
-				this.set('isTop', true);
-			} else {
-				this.set('isTop', false);
-			}
-		}
-
-		// add event listener to close the menu
-		$body.bind('click.bc-select', (e) => {
-			if (!this.get('isDestroyed')) {
-				const $el = $(e.target);
-
-				if (this.$().attr('id') !== $el.attr('id')) {
-					this.closeMenuAction();
-				}
-			} else {
-				$body.unbind('click.bc-select');
-			}
-		});
-	},
-
-	/**
-	 * Closes the list menu and destroys the global
-	 * click watcher
-	 *
-	 * @private
-	 * @method closeMenuAction
-	 * @returns {void}
-	 */
-	closeMenuAction() {
-		this.set('isOpen', false);
-		$('body').unbind('click.bc-select');
+		return false;
 	},
 
 	unselectAll() {
-		const items = this.get('model');
+		const items = get(this, 'model');
 		if (typeof items === 'object' && typeof items.forEach === 'function') {
 			items.forEach(item => {
 				set(item, '_selected', false);
@@ -226,29 +152,65 @@ export default Component.extend({
 		this.unselectAll();
 
 		set(item, '_selected', true);
+		this.close();
 
-		//this.set('selectedItem', item);
 		this.sendAction('onSelect', item);
-		this.closeMenuAction();
+	},
+
+	onOutsideClick() { this.close(); },
+	onEscape() {
+		this.close();
+		return false;
+	},
+
+	open() {
+		if (!get(this, 'isDestroyed')) {
+			this.bindEscape();
+			this.bindClick();
+
+			set(this, 'isOpen', true);
+			if (get(this, 'openTop')) {
+				set(this, 'isTop', true);
+			} else {
+				if (this.checkPosition()) {
+					set(this, 'isTop', true);
+				} else {
+					set(this, 'isTop', false);
+				}
+			}
+		}
+	},
+
+	close() {
+		if (!get(this, 'isDestroyed')) {
+			this.unbindEscape();
+			this.unbindClick();
+			set(this, 'isOpen', false);
+		}
 	},
 
 	actions: {
 		openMenu() {
-			if (!this.get('isOpen')) {
-				this.openMenuAction();
+			if (!get(this, 'isOpen')) {
+				this.open();
 			} else {
-				this.closeMenuAction();
+				this.close();
 			}
 		},
 
 		closeMenu() {
-			this.closeMenuAction();
+			this.close();
 		},
 
 		clickItemAction(item) {
 			if (!get(item, '_unselectable')) {
 				this.itemClicked(item);
 			}
+			return false;
+		},
+
+		stopPropagation() {
+			return false;
 		}
 	}
 });
